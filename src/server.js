@@ -17,7 +17,7 @@ app.use(cors({
 }));
 
 app.use(
-    "api/v1/",
+    "/api/ver1/",
     api
 );
 

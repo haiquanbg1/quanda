@@ -9,7 +9,8 @@ exports.isAuth = async (req, res, next) => {
         return errorResponse(res, 404, "Access token not found!");
     }
 
-    const verify = await jwt.verifyToken(accessToken);
+    const secretKey = process.env.ACCESS_TOKEN_SECRET;
+    const verify = await jwt.verifyToken(accessToken, secretKey);
 
     if (!verify) {
         return errorResponse(res, 401, "Need permission to access!");
@@ -17,7 +18,7 @@ exports.isAuth = async (req, res, next) => {
 
     try {
         const user = await User.findOne({
-            id: verify.payload.user_id
+            id: verify.payload.userId
         });
     
         req.user = user;

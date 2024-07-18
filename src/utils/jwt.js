@@ -26,9 +26,9 @@ const decodeToken = async (token, secretKey) => {
     try {
         return await verify(token, secretKey, {
             ignoreExpiration: true,
-        })
+        });
     } catch (error) {
-        console.log(`Error in decode access token: ${error}`)
+        console.log(`Error in decode access token: ${error}`);
         return null
     }
 }
