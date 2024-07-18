@@ -1,49 +1,51 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Answers', {
+    await queryInterface.createTable("answers", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
-      questionId: {
+      question_id: {
         type: Sequelize.INTEGER,
         references: {
           model: {
-            tableName: "Questions",
-            key: "id"
-          }
-        }
+            tableName: "questions",
+            key: "id",
+          },
+        },
       },
-      userId: {
+      user_id: {
         type: Sequelize.INTEGER,
         references: {
           model: {
-            tableName: "Users",
-            key: "id"
-          }
-        }
+            tableName: "users",
+            key: "id",
+          },
+        },
       },
       content: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
       },
       vote: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
-      createdAt: {
+      created_at: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW(),
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
-        type: Sequelize.DATE
-      }
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW(),
+      },
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Answers');
-  }
+    await queryInterface.dropTable("answers");
+  },
 };

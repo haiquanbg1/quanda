@@ -1,149 +1,99 @@
-const bcrypt = require("bcryptjs");
-
-const userService = require("../services/userService");
-const { errorResponse, successResponse } = require("../utils/response");
-const jwt = require("../utils/jwt");
-
-
-const login = async (req, res) => {
-    const { password } = req.body;
-    let { email } = req.body;
-
-    email = email.toLowerCase();
-
-    // check email
-    const user = await userService.findOne({
-        email
-    }).catch((err) => {
-        console.log(err);
-        return errorResponse(res, 500, "An error occurred.");
-    })
-
-    if (!user) {
-        return errorResponse(res, 404, "Account or password is wrong.");
-    }
-
-    // compare password
-    if (!bcrypt.compareSync(password, user.password)) {
-        return errorResponse(res, 404, "Account or password is wrong.");
-    }
-
-    const secretAccessKey = process.env.ACCESS_TOKEN_SECRET;
-    const lifeAccessKey = process.env.ACCESS_TOKEN_LIFE;
-    const secretRefreshKey = process.env.REFRESH_TOKEN_SECRET;
-    const lifeRefreshKey = process.env.REFRESH_TOKEN_LIFE;
-
-    // generate token
-    const accessToken = await jwt.generateToken({
-            userId: user.id
-        },
-        secretAccessKey,
-        lifeAccessKey
-    );
-    let refreshToken = await jwt.generateToken(
-        Math.floor(Math.random() * 1000),
-        secretRefreshKey,
-        lifeRefreshKey
-    );
-
-    // check refresh token exists
-    if (!user.refreshToken) {
-        try {
-            await userService.update(user.id, {
-                refreshToken: refreshToken
-            });
-        } catch (error) {
-            console.log(error);
-            return errorResponse(res, 500, "An error occurred.");
-        }
-    } else {
-        refreshToken = user.refreshToken;
-    }
-
-    return successResponse(res, 200, "Login successfully.", {
-        accessToken,
-        refreshToken,
-        profile: user.profile,
-        roles: user.roles
-    });
-}
-
-const register = async (req, res) => {
-    const user = req.body;
-    let newUser = {
-        username: user.username,
-        roles: "user",
-        profile: {
-            birthday: user.birthday,
-            class: user.class,
-            school: user.school
-        }
-    };
-
-    newUser.email = user.email.toLowerCase();
-
-    // check email exists
-    const checkUser = await userService.findOne({
-        email: newUser.email
-    }).catch((err) => {
-        console.log(err);
-        return errorResponse(res, 500, "An error occurred.");
-    });
-
-    if (checkUser) {
-        return errorResponse(res, 400, "Email was exists.");
-    }
-
-    // hash password
-    newUser.password = bcrypt.hashSync(user.password, 10);
-
-    // insert to db
-    await userService.create(newUser)
-    .catch((err) => {
-        console.log(err);
-        return errorResponse(res, 500, "An error occurred.");
-    })
-
-    return successResponse(res, 201, "Register successfully.");
-}
-
-const refreshToken = async (req, res) => {
-    const refreshToken = req.body.refreshToken;
-
-    if (!refreshToken) {
-        return errorResponse(res, 404, "Token not found.");
-    }
-
-    const decoded = await jwt.decodeToken(refreshToken);
-
-    if (!decoded) {
-        return errorResponse(res, 400, "Token invalid.");
-    }
-
-    try {
-        var user = userService.findOne({
-            refreshToken: refreshToken
-        });
-    } catch (error) {
-        return errorResponse(res, 500, "An error occurred.");
-    }
-
-    if (!user) {
-        return errorResponse(res, 404, "User not found.");
-    }
-
-    const secretAccessKey = process.env.ACCESS_TOKEN_SECRET;
-    const lifeAccessKey = process.env.ACCESS_TOKEN_LIFE;
-
-    const accessToken = await jwt.generateToken(user.id);
-
-    return successResponse(res, 200, "Refresh token successfully.", {
-        accessToken
-    });
-}
+const { successResponse, errorResponse } = require("../utils/response");
+const { StatusCodes } = require("http-status-codes");
+const User = require("../services/userService");
+const bcrypt = require("bcrypt");
+const { createAccessToken, createRefreshToken } = require("../utils/jwt");
+const ms = require("ms");
 
 module.exports = {
-    login,
-    register,
-    refreshToken
-}
+  register: async (req, res) => {
+    const { name, email, password, birthday, classUser, school } = req.body;
+    const saltRounds = 10;
+    const salt = bcrypt.genSaltSync(saltRounds);
+    const hashPassword = bcrypt.hashSync(password, salt);
+
+    try {
+      const userExist = await User.findOne({ email });
+      if (userExist) {
+        return errorResponse(res, StatusCodes.CONFLICT, "Email đã tồn tại");
+      }
+      const user = await User.create({
+        user_name: name,
+        email,
+        password: hashPassword,
+        birthday,
+        class_user: classUser,
+        school,
+      });
+
+      return successResponse(res, StatusCodes.CREATED, "Đăng ký thành công");
+    } catch (error) {
+      return errorResponse(
+        res,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        error.message
+      );
+    }
+  },
+  login: async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        return errorResponse(res, StatusCodes.NOT_FOUND, "Email không tồn tại");
+      }
+      const checkPassword = bcrypt.compareSync(password, user.password);
+      if (!checkPassword) {
+        return errorResponse(
+          res,
+          StatusCodes.BAD_REQUEST,
+          "Mật khẩu không chính xác"
+        );
+      }
+
+      const accessToken = createAccessToken({ userId: user.id });
+      const refreshToken = createRefreshToken({ userId: user.id });
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        // secure: false,
+        // sameSite: "none",
+        maxAge: ms("7 days"),
+      });
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        // secure: false,
+        // sameSite: "none",
+        maxAge: ms("7 days"),
+      });
+
+      return successResponse(res, StatusCodes.OK, "Đăng nhập thành công", {
+        user: {
+          name: user.user_name,
+          email: user.email,
+        },
+        accessToken,
+        refreshToken,
+      });
+    } catch (error) {
+      return errorResponse(
+        res,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        error.message
+      );
+    }
+  },
+  logout: async (req, res) => {
+    try {
+      res.clearCookie("accessToken");
+      res.clearCookie("refreshToken");
+      return successResponse(res, StatusCodes.OK, "Đăng xuất thành công");
+    } catch (error) {
+      return errorResponse(
+        res,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        error.message
+      );
+    }
+  },
+};

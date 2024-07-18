@@ -1,30 +1,41 @@
-const User = require("../services/userService");
-const jwt = require("../utils/jwt");
+const { StatusCodes } = require("http-status-codes");
 const { errorResponse } = require("../utils/response");
+const { decodeAccessToken } = require("../utils/jwt");
 
-exports.isAuth = async (req, res, next) => {
-    const accessToken = req.headers.authorization.split(' ')[1];
+const authMiddleware = async (req, res, next) => {
+  const accessToken = req.cookies?.accessToken;
 
-    if (!accessToken) {
-        return errorResponse(res, 404, "Access token not found!");
+  if (!accessToken) {
+    return errorResponse(
+      res,
+      StatusCodes.UNAUTHORIZED,
+      "Unauthorized! (Token not found)"
+    );
+  }
+
+  try {
+    const decodedAccessToken = decodeAccessToken(accessToken);
+
+    req.jwtDecoded = decodedAccessToken;
+    next();
+  } catch (error) {
+    console.log("Error from authMiddleware: ", error);
+    // Trường hợp token hết hạn: Trả về mã GONE - 410 cho FE để gọi API refresh token
+    if (error?.message?.includes("jwt expired")) {
+      return errorResponse(
+        res,
+        StatusCodes.GONE,
+        "Token expired, need to refresh token"
+      );
     }
 
-    const secretKey = process.env.ACCESS_TOKEN_SECRET;
-    const verify = await jwt.verifyToken(accessToken, secretKey);
+    // Trường hợp token không hợp lệ:
+    return errorResponse(
+      res,
+      StatusCodes.UNAUTHORIZED,
+      "Unauthorized! Vui lòng đăng nhập lại"
+    );
+  }
+};
 
-    if (!verify) {
-        return errorResponse(res, 401, "Need permission to access!");
-    }
-
-    try {
-        const user = await User.findOne({
-            id: verify.payload.userId
-        });
-    
-        req.user = user;
-    
-        return next();
-    } catch (error) {
-        return errorResponse(res, 500, "Can't find user!");
-    }
-}
+module.exports = authMiddleware;

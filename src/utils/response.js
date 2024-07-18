@@ -1,17 +1,19 @@
-const successResponse = (res, status, message, data) => {
-    return res.status(status).json({
-        message,
-        data
-    });
-}
-
-const errorResponse = (res, status, message) => {
-    return res.status(status).json({
-        message
-    })
-}
-
 module.exports = {
-    successResponse,
-    errorResponse
-}
+  successResponse: (res, status, message, data) => {
+    const response = {
+      status,
+      message,
+      data,
+    };
+    return res.status(response.status).json(response);
+  },
+
+  errorResponse: (res, status, message, errors = {}) => {
+    const response = {
+      status,
+      message,
+      errors,
+    };
+    return res.status(response.status).json(response);
+  },
+};
