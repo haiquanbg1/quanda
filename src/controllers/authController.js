@@ -69,39 +69,36 @@ const login = async (req, res) => {
 }
 
 const register = async (req, res) => {
-    let user = req.body;
-
-    user.email = user.email.toLowerCase();
-
-    // check user name exists
-    await userService.findOne({
-        userName: user.userName
-    }).then((value) => {
-        if (!value) {
-            return errorResponse(res, 400, "User name was exists.");
+    const user = req.body;
+    let newUser = {
+        username: user.username,
+        roles: "user",
+        profile: {
+            birthday: user.birthday,
+            class: user.class,
+            school: user.school
         }
-    }).catch((err) => {
-        console.log(err);
-        return errorResponse(res, 500, "An error occurred.");
-    });
+    };
+
+    newUser.email = user.email.toLowerCase();
 
     // check email exists
-    await userService.findOne({
-        email: user.email
-    }).then((value) => {
-        if (!value) {
-            return errorResponse(res, 400, "Email was exists.");
-        }
+    const checkUser = await userService.findOne({
+        email: newUser.email
     }).catch((err) => {
         console.log(err);
         return errorResponse(res, 500, "An error occurred.");
     });
 
+    if (checkUser) {
+        return errorResponse(res, 400, "Email was exists.");
+    }
+
     // hash password
-    user.password = bcrypt.hashSync(user.password, 10);
+    newUser.password = bcrypt.hashSync(user.password, 10);
 
     // insert to db
-    await userService.create(user)
+    await userService.create(newUser)
     .catch((err) => {
         console.log(err);
         return errorResponse(res, 500, "An error occurred.");
