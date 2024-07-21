@@ -11,16 +11,6 @@ const port = process.env.server_port;
 
 serverConfig(app);
 
-app.use(cors({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
-}));
-
-app.use(
-    "/api/ver1/",
-    api
-);
-
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 })

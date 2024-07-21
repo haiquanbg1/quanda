@@ -26,6 +26,7 @@ module.exports = {
       },
       vote: {
         type: Sequelize.INTEGER,
+        defaultValue: 0,
       },
       created_at: {
         allowNull: false,
