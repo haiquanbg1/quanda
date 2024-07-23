@@ -1,5 +1,6 @@
 [
   "20240716063446-create-user.js",
   "20240716063928-create-question.js",
-  "20240716064027-create-answer.js"
+  "20240716064027-create-answer.js",
+  "20240722074823-create-comment.js"
 ]

@@ -1,4 +1,4 @@
-const { Question, Answer, Sequelize, sequelize } = require("../models/index");
+const { Question, Sequelize, sequelize } = require("../models/index");
 
 const findAll = async (whereClause) => {
     return await Question.findAll({
@@ -52,9 +52,23 @@ const findWithLimit = async (offset, limit) => {
     return questions;
 };
 
+const update = async (id, updateClause) => {
+
+}
+
+const drop = async (id) => {
+    return await Question.destroy({
+        where: {
+            id
+        }
+    });
+}
+
 module.exports = {
     findAll,
     findOne,
     create,
     findWithLimit,
+    update,
+    drop
 };

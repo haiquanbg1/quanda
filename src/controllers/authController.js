@@ -3,6 +3,7 @@ const { StatusCodes } = require("http-status-codes");
 const User = require("../services/userService");
 const bcrypt = require("bcrypt");
 const { createAccessToken, createRefreshToken } = require("../utils/jwt");
+const neo4jUser = require("../services/neo4j/neo4jUserService");
 const ms = require("ms");
 
 module.exports = {
@@ -25,6 +26,8 @@ module.exports = {
         class_user: classUser,
         school,
       });
+
+      await neo4jUser.create(user.id);
 
       return successResponse(res, StatusCodes.CREATED, "Đăng ký thành công");
     } catch (error) {

@@ -22,7 +22,7 @@ const getUrl = (bucketName, fileName) => {
     return new Promise(async (resolve, reject) => {
         await minioClient.statObject(bucketName, fileName, (error, stat) => {
             if (!stat) {
-                resolve(null);
+                return resolve(null);
             }
 
             if (error) {
@@ -42,7 +42,28 @@ const getUrl = (bucketName, fileName) => {
     });
 }
 
+const deleteFile = async (bucketName, fileName) => {
+    await minioClient.statObject(bucketName, fileName, (error, stat) => {
+        if (stat) {
+            minioClient.removeObject(bucketName, fileName, (err) => {
+                if (err) {
+                    console.log(err);
+                    return err;
+                }
+            });
+        }
+
+        if (error) {
+            console.log(error);
+            return error;
+        }
+    });
+
+    return null;
+}
+
 module.exports = {
     upload,
-    getUrl
+    getUrl,
+    deleteFile
 }
